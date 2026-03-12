@@ -1,0 +1,12 @@
+# Install ffmpeg separately; it is required by the script but is not a Python package.
+
+faster-whisper==1.2.1
+pyannote.audio==3.1.1
+pyspellchecker==0.8.3
+tqdm==4.67.1
+
+# Install a CPU or CUDA build of torch that matches your machine.
+torch>=2.6,<2.7
+
+# Optional: required only when using --punct
+# whisper-punctuator
