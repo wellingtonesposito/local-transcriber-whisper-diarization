@@ -419,3 +419,42 @@ def test_sidebar_controls_and_no_footer_notice(client):
     assert "Theme: Auto" not in html                                                   # the old text button is gone
     assert 'aria-label="Show sidebar"' in html                                          # reopen button (shown only when hidden)
     assert 'transcriber.sidebar' in html                                                # saved state is applied before first paint
+
+
+class _TagBalance:
+    """Flags stray or missing closing tags. They don't fail on the server, but browsers (and htmx swaps) mis-nest the page."""
+
+    VOID = {"meta", "link", "input", "br", "img", "hr", "source", "area", "base", "col", "embed", "track", "wbr"}
+
+    def __init__(self, html):
+        from html.parser import HTMLParser
+
+        outer = self
+        self.stack, self.errors = [], []
+
+        class P(HTMLParser):
+            def handle_starttag(self, tag, attrs):
+                if tag not in outer.VOID:
+                    outer.stack.append(tag)
+
+            def handle_endtag(self, tag):
+                if tag in outer.VOID:
+                    return
+                if outer.stack and outer.stack[-1] == tag:
+                    outer.stack.pop()
+                else:
+                    outer.errors.append(f"unexpected </{tag}> after {outer.stack[-4:]}")
+
+        P().feed(html)
+        if self.stack:
+            self.errors.append(f"never closed: {self.stack}")
+
+
+def test_pages_and_fragments_are_well_formed_html(client, video):
+    pid, mid = transcribed(client, video)
+    client.put(f"/api/media/{mid}/segments/1", json={"text": "Edited."})
+    urls = ["/", f"/projects/{pid}", f"/projects/{pid}/files", f"/projects/{pid}/transcripts",
+            f"/projects/{pid}/transcripts/list", f"/media/{mid}", "/setup", "/projects/does-not-exist"]
+    for url in urls:
+        html = client.get(url).text
+        assert _TagBalance(html).errors == [], (url, _TagBalance(html).errors)
