@@ -1,12 +1,9 @@
-# Install ffmpeg separately; it is required by the script but is not a Python package.
-
-faster-whisper==1.2.1
-pyannote.audio==3.1.1
-pyspellchecker==0.8.3
-tqdm==4.67.1
-
-# Install a CPU or CUDA build of torch that matches your machine.
-torch>=2.6,<2.7
-
-# Optional: required only when using --punct
-# whisper-punctuator
+# Dependencies are now declared in pyproject.toml. Install with:
+#
+#   uv venv --python 3.12 && uv pip install -e ".[asr]"          # Windows / Linux / Intel Mac
+#   uv venv --python 3.12 && uv pip install -e ".[asr,mlx]"      # Apple Silicon (adds the GPU engine)
+#
+# (or: pip install -e ".[asr]")  ffmpeg is bundled via imageio-ffmpeg; a system ffmpeg is used if present.
+#
+# On an NVIDIA machine, install the matching CUDA build of torch first (see https://pytorch.org).
+-e .[asr]

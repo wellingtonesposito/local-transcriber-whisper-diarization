@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "transcriber"
+version = "0.1.0"
+description = "Local web app for transcribing and diarizing interviews (Whisper + pyannote) with QDA-friendly exports."
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.9",
+    "python-docx>=1.1",
+    "reportlab>=4.2",
+    "imageio-ffmpeg>=0.5",
+]
+
+[project.optional-dependencies]
+# Speech + diarization stack (large: pulls in torch). Install a CUDA/CPU torch build that matches your machine.
+asr = [
+    "faster-whisper==1.2.1",
+    "pyannote.audio==3.1.1",
+    "pyspellchecker==0.8.3",
+    "torch>=2.6,<2.7",
+    # Pins found necessary by the M0 spike: pyannote.audio 3.1.1 predates numpy 2 (np.NaN) and
+    # huggingface-hub 1.x (use_auth_token); torchaudio must match torch; scipy>=1.15 needs numpy 2.
+    "torchaudio>=2.6,<2.7",
+    "numpy>=1.26,<2",
+    "scipy<1.15",
+    "huggingface-hub<1.0",
+    # pyannote.core imports matplotlib when the diarization pipeline loads but does not declare it.
+    "matplotlib>=3.8",
+]
+# Apple Silicon GPU Whisper engine.
+mlx = ["mlx-whisper>=0.4; sys_platform == 'darwin' and platform_machine == 'arm64'"]
+dev = ["pytest>=8", "httpx>=0.27"]
+
+[project.scripts]
+transcriber = "transcriber.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/transcriber"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
