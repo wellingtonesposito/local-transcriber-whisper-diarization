@@ -1,0 +1,6 @@
+<div class="stats">
+  <div class="card stat"><b class="num">{{ stats.recordings }}</b><span>Recordings</span></div>
+  <div class="card stat"><b class="num">{{ stats.transcribed }}</b><span>Transcribed</span></div>
+  <div class="card stat"><b class="num">{{ stats.total_duration | hm }}</b><span>Total audio</span></div>
+  <div class="card stat"><b class="num"{% if stats.attention %} style="color: var(--red-text)"{% endif %}>{{ stats.attention }}</b><span>Need attention</span></div>
+</div>

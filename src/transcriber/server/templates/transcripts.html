@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Transcripts · {{ project.name }} · Transcriber{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="/">Projects</a> / <a href="/projects/{{ project.id }}">{{ project.name }}</a> / <span>Transcripts</span></div>
+<div class="head">
+  <div class="grow"><h1>Transcripts</h1><div class="sub">Check, correct and export the transcripts in {{ project.name }}.</div></div>
+  <a class="btn" href="/projects/{{ project.id }}"><svg class="i"><use href="#i-audio"/></svg>Recordings</a>
+</div>
+
+<div x-data="{ filter: 'all', show(state) { return this.filter === 'all' || (this.filter === 'reviewed') === (state === 'reviewed'); } }">
+  <div data-project="{{ project.id }}" hx-get="/projects/{{ project.id }}/transcripts/list" hx-trigger="refresh-files from:body" hx-swap="innerHTML">
+    {% include "_transcripts.html" %}
+  </div>
+</div>
+
+{% include "_export_modal.html" %}
+{% endblock %}

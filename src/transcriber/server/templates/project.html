@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} · Transcriber{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="/">Projects</a> / <span>{{ project.name }}</span></div>
+<div class="head">
+  <div class="grow"><h1>{{ project.name }}</h1><div class="sub">{{ project.description }}</div></div>
+  <a class="btn" href="/projects/{{ project.id }}/transcripts"><svg class="i"><use href="#i-doc"/></svg>Transcripts</a>
+  <form method="post" action="/projects/{{ project.id }}/delete" x-data
+        x-on:submit="if (!confirm('Delete this project and all its recordings and transcripts? This cannot be undone.')) $event.preventDefault()">
+    <button class="btn sm ghost danger">Delete project</button>
+  </form>
+</div>
+
+<div data-project="{{ project.id }}" hx-get="/projects/{{ project.id }}/stats" hx-trigger="refresh-files from:body" hx-swap="innerHTML">
+  {% include "_stats.html" %}
+</div>
+
+<div class="work">
+  <div>
+    <div x-data="uploader('{{ project.id }}')">
+      <div class="drop" tabindex="0" role="button" aria-label="Choose or drop audio and video files"
+           x-bind:class="{ over: dragging }"
+           x-on:click="$refs.picker.click()" x-on:keydown.enter.prevent="$refs.picker.click()" x-on:keydown.space.prevent="$refs.picker.click()"
+           x-on:dragover.prevent="dragging = true" x-on:dragleave.prevent="dragging = false"
+           x-on:drop.prevent="dragging = false; add($event.dataTransfer.files)">
+        <div class="up"><svg class="i"><use href="#i-up"/></svg></div>
+        <strong>Drop recordings here</strong>
+        <span>Audio or video · add as many as you like · or <a href="#" x-on:click.prevent.stop="$refs.picker.click()">browse files</a></span>
+        <input type="file" multiple hidden x-ref="picker" accept="audio/*,video/*,{{ extensions | join(',') }}" x-on:change="add($event.target.files); $event.target.value = ''">
+      </div>
+      <label class="check small" style="display:flex; gap:8px; align-items:center; margin-top:10px; cursor:pointer">
+        <input type="checkbox" x-model="auto"> <span class="muted">Start transcribing each file as soon as it has uploaded</span>
+      </label>
+      <div class="uploads" x-show="items.length" x-cloak>
+        <template x-for="it in items" x-bind:key="it.id">
+          <div class="upload">
+            <span class="name" x-text="it.name"></span>
+            <span class="muted small" x-text="it.state === 'error' ? '' : it.state === 'waiting' ? 'Waiting' : it.state === 'done' ? 'Uploaded' : it.pct + '%'"></span>
+            <div class="bar" style="grid-column: 1 / -1" x-show="it.state === 'uploading' || it.state === 'done'"><i x-bind:style="'width:' + it.pct + '%'"></i></div>
+            <div style="grid-column: 1 / -1; color: var(--red-text); font-size: 13px" x-show="it.state === 'error'" x-text="it.error"></div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <div id="files" style="margin-top:18px" hx-get="/projects/{{ project.id }}/files" hx-trigger="refresh-files from:body" hx-swap="innerHTML">
+      {% include "_files.html" %}
+    </div>
+  </div>
+
+  <aside class="card pad settings" x-data="settingsForm('{{ project.id }}', {{ settings | tojson | forceescape }}, {{ 'true' if has_token else 'false' }})">
+    <h2>Transcription settings <span class="save-state" x-text="status" aria-live="polite"></span></h2>
+    <div class="preset" role="group" aria-label="Presets">
+      <button type="button" x-bind:class="{ on: active === 'interview' }" x-on:click="applyPreset('interview')">Interview<em>2 speakers</em></button>
+      <button type="button" x-bind:class="{ on: active === 'focus' }" x-on:click="applyPreset('focus')">Focus group<em>3–8 speakers</em></button>
+      <button type="button" x-bind:class="{ on: active === 'draft' }" x-on:click="applyPreset('draft')">Quick draft<em>no speakers</em></button>
+    </div>
+    <div class="notice" x-show="s.diarize && !hasToken" x-cloak>Speaker identification needs a free Hugging Face token. <a href="/setup">Set it up</a>, or choose “Quick draft” to transcribe without it.</div>
+
+    <div class="field" style="margin-top:14px"><label for="s-lang">Language</label>
+      <select id="s-lang" x-model="s.language" x-on:change="save()">
+        {% for code, name in languages %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
+      </select></div>
+    <div class="field" style="margin-top:12px"><label for="s-model">Accuracy</label>
+      <select id="s-model" x-model="s.model_size" x-on:change="save()">
+        {% set labels = {'tiny': 'Fastest (tiny)', 'base': 'Fast (base)', 'small': 'Balanced (small)', 'medium': 'Accurate (medium)', 'large-v3': 'Best (large-v3)', 'turbo': 'Fast + accurate (turbo)'} %}
+        {% for m in model_sizes %}<option value="{{ m }}">{{ labels[m] }}</option>{% endfor %}
+      </select></div>
+
+    <div style="margin-top:14px">
+      <div class="row"><div>Identify speakers<small>Labels who is talking</small></div>
+        <button type="button" class="switch" role="switch" aria-label="Identify speakers" x-bind:class="{ on: s.diarize }" x-bind:aria-checked="s.diarize" x-on:click="s.diarize = !s.diarize; save()"></button></div>
+      <div class="row"><div>Keep “um”, “uh”<small>Transcribe disfluencies instead of dropping them</small></div>
+        <button type="button" class="switch" role="switch" aria-label="Keep disfluencies" x-bind:class="{ on: s.preserve_disfluencies }" x-bind:aria-checked="s.preserve_disfluencies" x-on:click="s.preserve_disfluencies = !s.preserve_disfluencies; save()"></button></div>
+      <div class="row"><div>Skip silence<small>Fewer invented words in quiet parts</small></div>
+        <button type="button" class="switch" role="switch" aria-label="Skip silence" x-bind:class="{ on: s.vad }" x-bind:aria-checked="s.vad" x-on:click="s.vad = !s.vad; save()"></button></div>
+    </div>
+
+    <details>
+      <summary>Advanced options</summary>
+      <div class="fields" style="margin-top:12px">
+        <label class="field">Engine
+          <select x-model="s.engine" x-on:change="save()">
+            <option value="auto">Automatic</option><option value="mlx">mlx-whisper (Apple Silicon)</option><option value="faster-whisper">faster-whisper (CPU / NVIDIA)</option>
+          </select></label>
+        <label class="field">Exact speakers <input type="number" min="1" max="20" placeholder="Auto" x-model.number="s.num_speakers" x-bind:disabled="!s.diarize" x-on:change="save()"></label>
+        <label class="field">Min speakers <input type="number" min="1" max="20" x-model.number="s.min_speakers" x-bind:disabled="!s.diarize || s.num_speakers" x-on:change="save()"></label>
+        <label class="field">Max speakers <input type="number" min="1" max="20" x-model.number="s.max_speakers" x-bind:disabled="!s.diarize || s.num_speakers" x-on:change="save()"></label>
+        <label class="field">Beam size <input type="number" min="1" max="10" x-model.number="s.beam_size" x-on:change="save()"></label>
+      </div>
+      <label class="field" style="margin-top:12px">Vocabulary / context
+        <textarea x-model="s.initial_prompt" x-on:change="save()" maxlength="500" placeholder="Names, jargon, acronyms, e.g. “Interview about NVivo, ATLAS.ti and Dr. Okafor’s study.”"></textarea></label>
+      <div class="row" style="margin-top:8px"><div>Use previous text as context<small>Turn off if the transcript starts repeating itself</small></div>
+        <button type="button" class="switch" role="switch" aria-label="Use previous text as context" x-bind:class="{ on: s.condition_on_previous_text }" x-bind:aria-checked="s.condition_on_previous_text" x-on:click="s.condition_on_previous_text = !s.condition_on_previous_text; save()"></button></div>
+    </details>
+  </aside>
+</div>
+
+{% endblock %}

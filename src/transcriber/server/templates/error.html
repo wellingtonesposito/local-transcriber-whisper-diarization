@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ status }} · Transcriber{% endblock %}
+{% block content %}
+<div class="card empty" style="padding: 48px 20px">
+  <h1 style="margin-bottom: 8px">{{ status }}</h1>
+  <p style="margin: 0 0 18px">{{ detail }}</p>
+  <a class="btn primary" href="/">Back to projects</a>
+</div>
+{% endblock %}

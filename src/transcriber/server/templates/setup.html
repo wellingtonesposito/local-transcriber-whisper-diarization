@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Setup · Transcriber{% endblock %}
+{% block content %}
+<div class="head"><div class="grow"><h1>Setup</h1><div class="sub">Everything the app needs, in one place.</div></div></div>
+
+{% set engine_ok = info.mlx_whisper or info.faster_whisper %}
+<div class="steps">
+  <div class="card step">
+    <span class="mk{{ '' if engine_ok else ' bad' }}"><svg class="i"><use href="#i-{{ 'check' if engine_ok else 'alert' }}"/></svg></span>
+    <div>
+      <h3>Transcription engine</h3>
+      {% if info.recommended_engine == 'mlx' and info.mlx_whisper %}
+      <p>mlx-whisper is using this Mac’s GPU, about 5× faster than the processor alone.</p>
+      {% elif info.faster_whisper %}
+      <p>faster-whisper is running on {{ 'your NVIDIA GPU' if info.cuda else 'the processor (CPU)' }}.{% if info.platform.startswith('Darwin') and info.platform.endswith('arm64') %} Install the <code>mlx</code> extra for much faster transcription on this Mac.{% endif %}</p>
+      {% else %}
+      <p>No transcription engine is installed. Run <code>uv pip install -e ".[asr,mlx]"</code> (Apple Silicon) or <code>".[asr]"</code>.</p>
+      {% endif %}
+      <p class="small">{{ info.platform }}</p>
+    </div>
+    <span class="pill {{ 'done' if engine_ok else 'failed' }}">{{ 'Ready' if engine_ok else 'Missing' }}</span>
+  </div>
+
+  <div class="card step">
+    <span class="mk{{ '' if ffmpeg else ' bad' }}"><svg class="i"><use href="#i-{{ 'check' if ffmpeg else 'alert' }}"/></svg></span>
+    <div>
+      <h3>Audio tools</h3>
+      {% if ffmpeg %}<p>ffmpeg is ready{% if 'imageio_ffmpeg' in ffmpeg %} (bundled, nothing to install){% endif %}.</p>
+      {% else %}<p>ffmpeg was not found. Install it (for example <code>brew install ffmpeg</code>) or <code>pip install imageio-ffmpeg</code>.</p>{% endif %}
+    </div>
+    <span class="pill {{ 'done' if ffmpeg else 'failed' }}">{{ 'Ready' if ffmpeg else 'Missing' }}</span>
+  </div>
+
+  <div class="card step" x-data="tokenForm({{ 'true' if has_token else 'false' }})">
+    <span class="mk{{ '' if (has_token and info.pyannote) else (' bad' if not info.pyannote else ' warn') }}"><svg class="i"><use href="#i-{{ 'check' if (has_token and info.pyannote) else 'alert' }}"/></svg></span>
+    <div>
+      <h3>Speaker identification</h3>
+      {% if not info.pyannote %}
+      <p>The pyannote library is not installed. Run <code>uv pip install -e ".[asr]"</code>.</p>
+      {% else %}
+      <p>One-time setup with a free Hugging Face account. Your token stays on this computer and is only sent to Hugging Face.{% if diar_cached %} The speaker model is already downloaded, so it works offline.{% endif %}</p>
+      <ol class="how" x-show="!has" {% if has_token %}x-cloak{% endif %}>
+        <li>Create a <b>read</b> token at <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener">huggingface.co/settings/tokens</a></li>
+        <li>Accept the terms for <a href="https://huggingface.co/pyannote/speaker-diarization-3.1" target="_blank" rel="noopener">speaker-diarization-3.1</a> and <a href="https://huggingface.co/pyannote/segmentation-3.0" target="_blank" rel="noopener">segmentation-3.0</a></li>
+        <li>Paste the token below</li>
+      </ol>
+      <div class="tokenrow">
+        <input type="password" autocomplete="off" placeholder="hf_…" x-model="token" aria-label="Hugging Face token">
+        <button class="btn primary" x-bind:disabled="!token || busy" x-on:click="save()">Save token</button>
+        <button class="btn" x-bind:disabled="!has || busy" x-on:click="test()">Test access</button>
+        <button class="btn danger" x-show="has" x-cloak x-on:click="remove()">Remove</button>
+      </div>
+      <div class="msg-box" x-bind:class="{ ok: ok }" x-show="msg" x-cloak x-text="msg" role="status"></div>
+      {% endif %}
+    </div>
+    <span class="pill {{ 'done' if (has_token and info.pyannote) else ('failed' if not info.pyannote else 'queued') }}" x-text="has ? 'Token saved' : 'Action needed'">{{ 'Token saved' if has_token else 'Action needed' }}</span>
+  </div>
+
+  <div class="card step">
+    <span class="mk"><svg class="i"><use href="#i-folder"/></svg></span>
+    <div><h3>Data folder</h3><p class="num">{{ data_dir }}</p></div>
+    <span></span>
+  </div>
+</div>
+{% endblock %}

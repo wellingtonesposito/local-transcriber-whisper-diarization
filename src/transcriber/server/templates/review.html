@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}{{ media.filename }} · Transcriber{% endblock %}
+{% block mainclass %} has-player{% endblock %}
+{% block wrapclass %} wide{% endblock %}
+{% block content %}
+<div x-data="review('{{ media.id }}', {{ 'true' if media.reviewed else 'false' }})" x-init="load()">
+  <div class="crumbs"><a href="/">Projects</a> / <a href="/projects/{{ project.id }}">{{ project.name }}</a> / <a href="/projects/{{ project.id }}/transcripts">Transcripts</a> / <span>{{ media.filename }}</span></div>
+  <div class="head">
+    <div class="grow"><h1>{{ media.filename }}</h1></div>
+    <div class="seg-ctl" role="group" aria-label="Text version">
+      <button x-bind:class="{ on: $store.exp.cleanup === 'verbatim' }" x-on:click="$store.exp.set('cleanup', 'verbatim')">Verbatim</button>
+      <button x-bind:class="{ on: $store.exp.cleanup === 'clean' }" x-on:click="$store.exp.set('cleanup', 'clean')">Clean</button>
+    </div>
+    <button class="btn" x-bind:class="{ ok: reviewed }" x-on:click="toggleReviewed()" x-bind:aria-pressed="reviewed">
+      <svg class="i" x-show="reviewed" x-cloak><use href="#i-check"/></svg><span x-text="reviewed ? 'Reviewed' : 'Mark as reviewed'">Mark as reviewed</span></button>
+    <button class="btn primary" x-on:click="$store.dlg.show({{ {'projectId': project.id, 'mediaIds': [media.id], 'count': 1, 'name': media.filename} | tojson | forceescape }})"><svg class="i"><use href="#i-down"/></svg>Export</button>
+  </div>
+
+  <section class="card spk-strip" aria-label="Speakers" x-show="speakers.length" x-cloak>
+    <h2>Speakers</h2>
+    <template x-for="s in speakers" x-bind:key="s.id">
+      <div class="spk-chip" x-bind:style="'--c:' + color(s.id)">
+        <span class="avatar" x-text="initial(s.id)"></span>
+        <input type="text" maxlength="80" x-bind:value="s.name" x-bind:placeholder="s.id" x-on:change="rename(s, $event.target.value)" aria-label="Speaker name">
+        <small class="num" x-text="share(s.id) + '%'"></small>
+        <div class="bar"><i x-bind:style="'width:' + share(s.id) + '%'"></i></div>
+      </div>
+    </template>
+    <span class="muted small hintline">Names apply everywhere, including exports.</span>
+  </section>
+
+  <div class="review{% if is_video %} has-video{% endif %}"{% if is_video %} x-bind:class="{ theater: theater }"{% endif %}>
+    {% if is_video %}
+    <div class="media">
+      <div class="card media-card">
+        <video x-ref="player" preload="metadata" playsinline src="/media/{{ media.id }}/file"
+               x-on:click="toggle()" x-on:timeupdate="onTime()" x-on:play="onPlay()" x-on:pause="onPause()" x-on:ended="onPause()" x-on:loadedmetadata="onMeta()"></video>
+        <div class="vtools">
+          <button class="btn sm" x-on:click="toggleTheater()" x-bind:aria-pressed="theater" title="Show the video full width, with the transcript below">
+            <svg class="i"><use href="#i-theater"/></svg><span x-text="theater ? 'Exit theater mode' : 'Theater mode'">Theater mode</span></button>
+          <span style="flex:1"></span>
+          <button class="btn sm ghost icon" aria-label="Full screen" title="Full screen" x-on:click="fullscreen()"><svg class="i"><use href="#i-expand"/></svg></button>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <audio x-ref="player" preload="metadata" hidden src="/media/{{ media.id }}/file"
+           x-on:timeupdate="onTime()" x-on:play="onPlay()" x-on:pause="onPause()" x-on:ended="onPause()" x-on:loadedmetadata="onMeta()"></audio>
+    {% endif %}
+
+    <section class="card tx" aria-label="Transcript">
+      <div class="empty" x-show="loading">Loading transcript…</div>
+      <div class="empty" x-show="!loading && !turns.length" x-cloak>This transcript is empty. No speech was detected.</div>
+      <p class="muted small hint" x-show="!loading && turns.length && !editable" x-cloak>Clean view is a read-only preview of what a clean-verbatim export contains. Switch to Verbatim to edit.</p>
+      <p class="muted small hint" x-show="!loading && turns.length && editable" x-cloak>Click any word to play from it. Double-click a word, or press Edit, to correct the text.</p>
+      <template x-for="t in turns" x-bind:key="t.id">
+        <article class="line" x-bind:id="'turn-' + t.id" x-bind:class="{ active: t.id === activeTurn, editing: t.id === editing }">
+          <button class="ts num" title="Play from here" x-on:click="seek(t.segs[0])" x-text="fmt(t.segs[0].start)"></button>
+          <div>
+            <div class="who">
+              <span class="avatar" x-bind:style="'--c:' + color(t.speaker)" x-text="initial(t.speaker)"></span>
+              <span x-text="name(t.speaker)"></span>
+              <span class="tag" x-show="t.segs.some((s) => s.edited)">edited</span>
+              <span class="tools" x-show="editable">
+                <button class="btn sm ghost" x-show="t.id !== editing" x-on:click="startEdit(t)">Edit</button>
+                <button class="btn sm" x-show="t.id === editing" x-on:click="stopEdit()">Done</button>
+              </span>
+            </div>
+            <template x-if="t.id !== editing">
+              <div class="flow">
+                <template x-for="s in t.segs" x-bind:key="s.id">
+                  <span class="seg" x-bind:class="{ deleted: s.deleted }" x-on:click="wordClick($event, s)" x-on:dblclick="startEdit(t, s)" x-html="segHtml(s)"></span>
+                </template>
+              </div>
+            </template>
+            <template x-if="t.id === editing">
+              <div class="edit-turn">
+                <template x-for="s in t.segs" x-bind:key="s.id">
+                  <div class="seg-edit" x-bind:class="{ deleted: s.deleted }">
+                    <span class="txt" x-bind:id="'edit-' + s.id" x-bind:contenteditable="!s.deleted" spellcheck="true"
+                          x-on:blur="commit(s, $event.target)" x-on:keydown.enter.prevent="$event.target.blur()" x-on:keydown.escape.prevent="stopEdit()" x-text="s.text"></span>
+                    <button class="btn sm ghost" x-on:click="toggleDelete(s)" x-text="s.deleted ? 'Restore' : 'Remove'"></button>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+        </article>
+      </template>
+    </section>
+  </div>
+
+  <div class="player" role="region" aria-label="Playback">
+    <div class="in">
+      <button class="play" x-on:click="toggle()" x-bind:aria-label="playing ? 'Pause' : 'Play'">
+        <svg class="i" style="width:20px;height:20px" x-show="!playing"><use href="#i-play"/></svg>
+        <svg class="i" style="width:20px;height:20px" x-show="playing" x-cloak><use href="#i-pause"/></svg>
+      </button>
+      <div>
+        <div class="timeline" tabindex="0" role="slider" aria-label="Playback position, coloured by speaker" aria-valuemin="0" x-bind:aria-valuemax="Math.round(total)" x-bind:aria-valuenow="Math.round(cur)"
+             x-on:click="scrub($event)" x-on:keydown.left.prevent="nudge(-5)" x-on:keydown.right.prevent="nudge(5)">
+          <template x-for="(b, i) in blocks" x-bind:key="i"><i x-bind:class="{ gap: !b.spk }" x-bind:style="'flex:' + b.flex + ';--c:' + b.color"></i></template>
+          <span class="head-ind" x-bind:style="'left:' + pct + '%'"></span>
+        </div>
+        <div class="times num"><span x-text="fmt(cur)">0:00</span><span x-text="fmt(total)">0:00</span></div>
+      </div>
+      <div class="ctl">
+        <div class="vol">
+          <button class="btn sm ghost icon" x-on:click="toggleMute()" x-bind:aria-label="muted ? 'Unmute' : 'Mute'" x-bind:title="muted ? 'Unmute' : 'Mute'">
+            <svg class="i" x-show="!(muted || volume === 0)"><use href="#i-volume"/></svg>
+            <svg class="i" x-show="muted || volume === 0" x-cloak><use href="#i-mute"/></svg>
+          </button>
+          <input type="range" min="0" max="1" step="0.01" aria-label="Volume" x-bind:value="muted ? 0 : volume" x-on:input="setVolume(Number($event.target.value))">
+        </div>
+        <div class="speed">
+          <span class="num small rate-now" x-show="!rates.includes(rate)" x-cloak x-text="rateLabel" aria-live="polite"></span>
+          <div class="seg-ctl" role="group" aria-label="Playback speed">
+            <button class="nudge" x-on:click="stepRate(-0.05)" x-bind:disabled="rate <= minRate" aria-label="Slower" title="Slower (−0.05×)">−</button>
+            <template x-for="r in rates" x-bind:key="r"><button x-bind:class="{ on: rate === r }" x-on:click="setRate(r)" x-text="r + '×'"></button></template>
+            <button class="nudge" x-on:click="stepRate(0.05)" x-bind:disabled="rate >= maxRate" aria-label="Faster" title="Faster (+0.05×)">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% include "_export_modal.html" %}
+{% endblock %}

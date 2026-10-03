@@ -1,0 +1,45 @@
+<div class="scrim" x-data x-show="$store.dlg.open" x-cloak
+     x-on:keydown.escape.window="$store.dlg.close()" x-on:click.self="$store.dlg.close()"
+     role="dialog" aria-modal="true" aria-labelledby="dlg-title">
+  <div class="modal">
+    <div class="l">
+      <div class="mhead">
+        <div class="grow"><h2 id="dlg-title">Export transcripts</h2><div class="sub" x-text="$store.dlg.subtitle"></div></div>
+        <button class="btn icon ghost" aria-label="Close" x-on:click="$store.dlg.close()"><svg class="i"><use href="#i-x"/></svg></button>
+      </div>
+      {% for group, title in [('analysis', 'For your analysis software'), ('data', 'Data and reading')] %}
+      <div class="group">
+        <div class="gl">{{ title }}</div>
+        {% for ex in exporters if ex.group == group %}
+        <button type="button" class="fmt" role="checkbox" x-bind:class="{ on: $store.exp.has('{{ ex.key }}') }" x-bind:aria-checked="$store.exp.has('{{ ex.key }}')"
+                x-on:click="$store.exp.toggle('{{ ex.key }}')">
+          <span class="box"><svg class="i"><use href="#i-check"/></svg></span>
+          <span><b>{{ ex.label }}</b><small>{{ ex.description }}</small></span>
+          <span class="ext">{{ ex.ext }}</span>
+        </button>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+    <div class="r">
+      <div>
+        <div class="gl">Text</div>
+        <div class="seg-ctl block" role="group" aria-label="Text version">
+          <button x-bind:class="{ on: $store.exp.cleanup === 'verbatim' }" x-on:click="$store.exp.set('cleanup', 'verbatim')">Verbatim</button>
+          <button x-bind:class="{ on: $store.exp.cleanup === 'clean' }" x-on:click="$store.exp.set('cleanup', 'clean')">Clean</button>
+        </div>
+        <small class="muted" style="display:block; margin-top:8px; font-size:12.5px">Clean removes “um”, “uh” and stutters. Your original is never changed.</small>
+      </div>
+      <div class="row-opt"><span>Timestamps</span>
+        <button class="switch" role="switch" aria-label="Timestamps" x-bind:class="{ on: $store.exp.timestamps }" x-bind:aria-checked="$store.exp.timestamps" x-on:click="$store.exp.set('timestamps', !$store.exp.timestamps)"></button></div>
+      <div class="row-opt"><div>One block per speaker turn<small class="muted" style="display:block; font-size:12.5px">Joins consecutive lines from the same speaker. Captions and CSV keep timed lines.</small></div>
+        <button class="switch" role="switch" aria-label="One block per speaker turn" x-bind:class="{ on: $store.exp.merge }" x-bind:aria-checked="$store.exp.merge" x-on:click="$store.exp.set('merge', !$store.exp.merge)"></button></div>
+      <div class="row-opt"><span>Voice tags in VTT</span>
+        <button class="switch" role="switch" aria-label="Voice tags in VTT" x-bind:class="{ on: $store.exp.voice }" x-bind:aria-checked="$store.exp.voice" x-on:click="$store.exp.set('voice', !$store.exp.voice)"></button></div>
+      <div class="btns">
+        <button class="btn primary" x-bind:disabled="!$store.exp.formats.length" x-on:click="$store.dlg.download()" x-text="$store.dlg.buttonLabel"></button>
+        <button class="btn" x-on:click="$store.dlg.close()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>

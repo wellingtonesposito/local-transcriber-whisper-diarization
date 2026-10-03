@@ -1,0 +1,45 @@
+{% set state_labels = {'to_review': 'To review', 'in_review': 'In review', 'reviewed': 'Reviewed'} %}
+{% set state_class = {'to_review': 'queued', 'in_review': 'info', 'reviewed': 'done'} %}
+<div class="stats">
+  <div class="card stat"><b class="num">{{ tstats.total }}</b><span>Transcripts</span></div>
+  <div class="card stat"><b class="num">{{ tstats.to_review }}</b><span>To review</span></div>
+  <div class="card stat"><b class="num">{{ tstats.reviewed }}</b><span>Reviewed</span></div>
+</div>
+
+{% if items %}
+<div class="card files" x-data>
+  <div class="top">
+    <div class="seg-ctl" role="group" aria-label="Filter transcripts">
+      <button x-bind:class="{ on: filter === 'all' }" x-on:click="filter = 'all'">All <span class="num">{{ tstats.total }}</span></button>
+      <button x-bind:class="{ on: filter === 'todo' }" x-on:click="filter = 'todo'">To review <span class="num">{{ tstats.to_review }}</span></button>
+      <button x-bind:class="{ on: filter === 'reviewed' }" x-on:click="filter = 'reviewed'">Reviewed <span class="num">{{ tstats.reviewed }}</span></button>
+    </div>
+    <span class="grow"></span>
+    <button class="btn sm" x-on:click="$store.dlg.show({{ {'projectId': project.id, 'mediaIds': done_ids, 'count': done_ids | length, 'name': project.name} | tojson | forceescape }})"><svg class="i"><use href="#i-down"/></svg>Export all</button>
+  </div>
+  {% for m in items %}
+  <div class="frow" data-media="{{ m.id }}" data-status="{{ m.status }}" x-show="show('{{ m.state }}')">
+    <div class="fic"><svg class="i"><use href="#i-doc"/></svg></div>
+    <div style="min-width:0">
+      <div class="fname" title="{{ m.filename }}"><a href="/media/{{ m.id }}">{{ m.filename }}</a></div>
+      <div class="fmeta num">{{ m.duration | duration }}{% if m.info.language %} · {{ m.info.language | upper }}{% endif %}{% if m.speaker_names %} · {{ m.speaker_names[:3] | join(', ') }}{% if m.speaker_names | length > 3 %} +{{ m.speaker_names | length - 3 }}{% endif %}{% endif %}</div>
+    </div>
+    <div class="fstat">
+      <span class="pill {{ state_class[m.state] }}">{{ state_labels[m.state] }}</span>
+      <div class="msg">{% if m.edits %}{{ m.edits }} edit{{ '' if m.edits == 1 else 's' }}{% else %}No edits yet{% endif %}</div>
+    </div>
+    <div class="fact">
+      <a class="btn sm {{ 'primary' if m.state != 'reviewed' }}" href="/media/{{ m.id }}">{{ 'Open' if m.state == 'reviewed' else 'Review' }}</a>
+      <button class="btn sm ghost" x-on:click="$store.app.setReviewed('{{ m.id }}', {{ 'false' if m.state == 'reviewed' else 'true' }})">{{ 'Mark to review' if m.state == 'reviewed' else 'Mark reviewed' }}</button>
+      <button class="btn sm ghost" x-on:click="$store.dlg.show({{ {'projectId': project.id, 'mediaIds': [m.id], 'count': 1, 'name': m.filename} | tojson | forceescape }})">Export</button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card empty" style="padding: 40px 20px">
+  <h2 style="margin-bottom:6px">No transcripts yet</h2>
+  <p style="margin:0 0 16px">Transcribed recordings appear here, ready to review and export.</p>
+  <a class="btn primary" href="/projects/{{ project.id }}">Go to recordings</a>
+</div>
+{% endif %}

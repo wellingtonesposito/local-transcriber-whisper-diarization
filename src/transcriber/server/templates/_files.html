@@ -1,0 +1,50 @@
+{% set stage_labels = {'prepare': 'Preparing audio', 'transcribe': 'Transcribing', 'diarize': 'Identifying speakers', 'align': 'Finishing'} %}
+{% set status_labels = {'uploaded': 'Ready', 'queued': 'Queued', 'running': 'Transcribing', 'done': 'Transcribed', 'failed': 'Needs attention', 'cancelled': 'Cancelled'} %}
+{% if media %}
+<div class="card files" x-data>
+  <div class="top">
+    <div class="grow"><h2>Recordings</h2><span class="pill count">{{ media | length }}</span></div>
+    {% if stats.pending %}
+    <button class="btn sm primary" x-on:click="$store.app.transcribe('{{ project.id }}')"><svg class="i"><use href="#i-play"/></svg>Transcribe {{ stats.pending }} file{{ '' if stats.pending == 1 else 's' }}</button>
+    {% endif %}
+  </div>
+  {% for m in media %}
+  <div class="frow" data-media="{{ m.id }}" data-status="{{ m.status }}">
+    <div class="fic"><svg class="i"><use href="#i-{{ 'video' if m.ext in video_exts else 'audio' }}"/></svg></div>
+    <div style="min-width:0">
+      <div class="fname" title="{{ m.filename }}">{{ m.filename }}</div>
+      <div class="fmeta num">{{ m.duration | duration }} · {{ m.size | filesize }}</div>
+    </div>
+    <div class="fstat">
+      {% if m.status == 'running' %}
+        <span class="pill running" data-pill>{{ stage_labels.get(m.stage, 'Working') }} · {{ (m.progress * 100) | round | int }}%</span>
+        <div class="bar"><i data-bar style="width: {{ (m.progress * 100) | round(1) }}%"></i></div>
+        <div class="msg" data-msg>{{ m.message }}</div>
+      {% elif m.status == 'queued' %}
+        <span class="pill queued">Queued</span>
+        <div class="msg" data-msg>{{ m.message }}</div>
+      {% else %}
+        <span class="pill {{ m.status }}">{{ status_labels[m.status] }}</span>
+      {% endif %}
+    </div>
+    <div class="fact">
+      {% if m.status in ('running', 'queued') %}
+        <button class="btn sm ghost" x-on:click="$store.app.post('/api/media/{{ m.id }}/cancel')">Cancel</button>
+      {% elif m.status == 'done' %}
+        <a class="btn sm ghost" href="/media/{{ m.id }}">Open transcript</a>
+      {% else %}
+        <button class="btn sm primary" x-on:click="$store.app.transcribe('{{ project.id }}', ['{{ m.id }}'])">{{ 'Retry' if m.status == 'failed' else 'Transcribe' }}</button>
+      {% endif %}
+      {% if m.status not in ('running',) %}
+        <button class="btn sm ghost icon" aria-label="Remove {{ m.filename }}" title="Remove file" x-on:click="$store.app.removeMedia('{{ m.id }}', {{ m.filename | tojson | forceescape }}, {{ 'true' if m.status == 'done' else 'false' }})"><svg class="i" style="width:16px;height:16px"><use href="#i-trash"/></svg></button>
+      {% endif %}
+    </div>
+    {% if m.status == 'failed' %}
+    <div class="ferr">{{ m.error }}{% if 'Hugging Face' in m.error %} <a href="/setup">Fix in Setup →</a>{% endif %}<br><span class="muted">Your transcription is saved; retrying skips it.</span></div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card empty" style="margin-top:18px">No recordings yet. Drop files above to get started.</div>
+{% endif %}
