@@ -180,3 +180,8 @@ HTMX/Alpine, SQLite, job worker), `tests/`. Dependency pins in `pyproject.toml` 
 predates NumPy 2 and huggingface-hub 1.x, torchaudio must match torch, and matplotlib is needed but not declared by
 pyannote. PyTorch 2.6 refuses to load pyannote's checkpoints by default, so `core/diarize.py` allowlists the four classes
 they contain (instead of turning the safety check off).
+
+## License
+
+Released under the [MIT License](LICENSE). Third-party libraries and models keep their own licenses and terms; the vendored
+front-end libraries are listed in `src/transcriber/server/static/vendor/README.txt`.
