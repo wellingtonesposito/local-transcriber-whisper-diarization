@@ -49,9 +49,12 @@ def clean_settings(d: dict | None) -> dict:
     d = d or {}
     base = JobSettings()
 
-    def opt_int(v, lo=1, hi=20):
+    def opt_int(key, lo=1, hi=20):
+        """A missing key means "use the default"; a key that is present but blank/null means "automatic"."""
+        if key not in d:
+            return getattr(base, key)
         try:
-            n = int(v)
+            n = int(d[key])
         except (TypeError, ValueError):
             return None
         return n if lo <= n <= hi else None
@@ -63,15 +66,15 @@ def clean_settings(d: dict | None) -> dict:
         model_size=d.get("model_size") if d.get("model_size") in MODEL_SIZES else base.model_size,
         language=(d.get("language") or None) if (d.get("language") or "") in dict(LANGUAGES) else None,
         engine=d.get("engine") if d.get("engine") in ("auto", "mlx", "faster-whisper") else "auto",
-        beam_size=opt_int(d.get("beam_size"), 1, 10) or base.beam_size,
+        beam_size=opt_int("beam_size", 1, 10) or base.beam_size,
         vad=boolean(d.get("vad"), base.vad),
         initial_prompt=(str(d.get("initial_prompt") or "").strip()[:500] or None),
         preserve_disfluencies=boolean(d.get("preserve_disfluencies"), base.preserve_disfluencies),
         condition_on_previous_text=boolean(d.get("condition_on_previous_text"), base.condition_on_previous_text),
         diarize=boolean(d.get("diarize"), base.diarize),
-        num_speakers=opt_int(d.get("num_speakers")),
-        min_speakers=opt_int(d.get("min_speakers")),
-        max_speakers=opt_int(d.get("max_speakers")),
+        num_speakers=opt_int("num_speakers"),
+        min_speakers=opt_int("min_speakers"),
+        max_speakers=opt_int("max_speakers"),
     )
     return asdict(s)
 

@@ -24,7 +24,7 @@ ProgressFn = Callable[[str, float, str], None]  # (stage, overall fraction 0..1,
 
 @dataclass
 class JobSettings:
-    model_size: str = "small"
+    model_size: str = "turbo"
     language: str | None = None
     engine: str = "auto"
     beam_size: int = 5
@@ -33,7 +33,7 @@ class JobSettings:
     preserve_disfluencies: bool = False
     condition_on_previous_text: bool = True
     diarize: bool = True
-    num_speakers: int | None = None
+    num_speakers: int | None = 2  # interviews are the common case; the Focus group preset clears it
     min_speakers: int | None = None
     max_speakers: int | None = None
     max_gap: float = 1.0

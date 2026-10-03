@@ -36,7 +36,7 @@ def test_full_run_writes_transcript(media, tmp_path, engine):
                      diarizer=FakeDiarizer())
     d = json.loads((tmp_path / "work" / "transcript.json").read_text())
     assert [s["speaker"] for s in d["segments"]] == ["SPEAKER_00", "SPEAKER_01"]
-    assert d["language"] == "en" and d["engine"] == "fake" and d["params"]["model_size"] == "small"
+    assert d["language"] == "en" and d["engine"] == "fake" and d["params"]["model_size"] == "turbo"
     assert t.segments[0].text == "Hello there."
     fr = [f for _, f in events]
     assert fr == sorted(fr) and fr[-1] == 1.0

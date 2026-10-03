@@ -146,7 +146,7 @@ def test_settings_are_validated_and_saved(client):
     r = client.put(f"/api/projects/{pid}/settings", json={"model_size": "evil", "num_speakers": "2", "beam_size": 99,
                                                           "language": "es", "bogus": 1, "diarize": False})
     s = r.json()
-    assert s["model_size"] == "small" and s["num_speakers"] == 2 and s["beam_size"] == 5
+    assert s["model_size"] == "turbo" and s["num_speakers"] == 2 and s["beam_size"] == 5  # invalid values fall back to the defaults
     assert s["language"] == "es" and s["diarize"] is False and "bogus" not in s
     assert client.app.state.db.get_project(pid)["settings"]["language"] == "es"
 
@@ -458,3 +458,40 @@ def test_pages_and_fragments_are_well_formed_html(client, video):
     for url in urls:
         html = client.get(url).text
         assert _TagBalance(html).errors == [], (url, _TagBalance(html).errors)
+
+
+def test_defaults_are_interview_preset_with_turbo():
+    from transcriber.server.app import clean_settings
+    d = clean_settings({})
+    assert d["model_size"] == "turbo" and d["diarize"] is True and d["num_speakers"] == 2
+    assert d["min_speakers"] is None and d["max_speakers"] is None and d["language"] is None
+    assert clean_settings(None) == d
+
+
+def test_cleared_speaker_counts_mean_automatic_not_default():
+    from transcriber.server.app import clean_settings
+    # the Focus group preset sends explicit nulls: they must not be silently turned back into "2 speakers"
+    for blank in (None, ""):
+        d = clean_settings({"num_speakers": blank, "min_speakers": 3, "max_speakers": 8})
+        assert d["num_speakers"] is None and d["min_speakers"] == 3 and d["max_speakers"] == 8
+
+
+def test_saved_project_settings_are_never_overridden_by_new_defaults():
+    from transcriber.server.app import clean_settings
+    saved = clean_settings({"model_size": "small", "num_speakers": None, "diarize": False, "language": "pt"})
+    assert clean_settings(saved) == saved                 # round-trips unchanged
+    assert saved["model_size"] == "small" and saved["num_speakers"] is None and saved["diarize"] is False
+
+
+def test_new_project_shows_defaults_and_jobs_use_them(client, video):
+    import html as htmllib
+    pid = new_project(client)
+    page = htmllib.unescape(client.get(f"/projects/{pid}").text)
+    assert '"model_size": "turbo"' in page and '"num_speakers": 2' in page and '"diarize": true' in page
+    mid = upload(client, pid, video).json()["id"]
+    client.post(f"/api/projects/{pid}/transcribe", json={})          # never opened the settings panel
+    wait_for(client, pid, mid, "done")
+    import json
+    job = client.app.state.db._q("select settings from jobs order by id desc limit 1")[0]
+    used = json.loads(job["settings"])
+    assert used["model_size"] == "turbo" and used["num_speakers"] == 2 and used["diarize"] is True

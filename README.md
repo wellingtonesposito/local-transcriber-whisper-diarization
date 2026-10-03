@@ -48,14 +48,14 @@ turning off **Identify speakers** (everything is then labelled as one speaker).
 
 ## Using the app
 
-**Project page.** Drop files on the drop zone (or click it). Pick a preset (Interview, Focus group or Quick draft) or adjust the settings, then press **Transcribe**. Several files
+**Project page.** Drop files on the drop zone (or click it). New projects start on the **Interview** preset (2 speakers) with the `turbo` model; pick another preset (Focus group, Quick draft) or adjust the settings, then press **Transcribe**. Several files
 are queued and processed one after another; models stay loaded between files, so a batch is faster than running files
 separately. You can cancel a file at any time; if a run fails (for example because the Hugging Face terms were not yet
 accepted) the finished stages are kept and **Retry** resumes where it stopped.
 
 | Setting | What it does |
 |---|---|
-| Model | `small` is fast; `large-v3` / `turbo` are more accurate. |
+| Accuracy (model) | `turbo` by default: fast and accurate. `small` is faster; `large-v3` is the most accurate. |
 | Language | Auto-detect, or force one for more stable results. |
 | Speakers (exact number) | If you know it (most interviews: 2), say so. It improves speaker accuracy. Min/max are under *Advanced*. |
 | Keep "um", "uh" | Nudges Whisper to transcribe disfluencies instead of silently dropping them. |
