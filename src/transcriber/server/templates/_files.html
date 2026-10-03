@@ -4,8 +4,8 @@
 <div class="card files" x-data>
   <div class="top">
     <div class="grow"><h2>Recordings</h2><span class="pill count">{{ media | length }}</span></div>
-    {% if stats.pending %}
-    <button class="btn sm primary" x-on:click="$store.app.transcribe('{{ project.id }}')"><svg class="i"><use href="#i-play"/></svg>Transcribe {{ stats.pending }} file{{ '' if stats.pending == 1 else 's' }}</button>
+    {% if pending %}
+    <button class="btn sm primary" x-on:click="$store.app.transcribe('{{ project.id }}')"><svg class="i"><use href="#i-play"/></svg>Transcribe {{ pending }} file{{ '' if pending == 1 else 's' }}</button>
     {% endif %}
   </div>
   {% for m in media %}

@@ -1,10 +1,5 @@
 {% set state_labels = {'to_review': 'To review', 'in_review': 'In review', 'reviewed': 'Reviewed'} %}
 {% set state_class = {'to_review': 'queued', 'in_review': 'info', 'reviewed': 'done'} %}
-<div class="stats">
-  <div class="card stat"><b class="num">{{ tstats.total }}</b><span>Transcripts</span></div>
-  <div class="card stat"><b class="num">{{ tstats.to_review }}</b><span>To review</span></div>
-  <div class="card stat"><b class="num">{{ tstats.reviewed }}</b><span>Reviewed</span></div>
-</div>
 
 {% if items %}
 <div class="card files" x-data>

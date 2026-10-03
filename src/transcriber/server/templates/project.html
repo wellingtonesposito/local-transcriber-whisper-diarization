@@ -11,10 +11,6 @@
   </form>
 </div>
 
-<div data-project="{{ project.id }}" hx-get="/projects/{{ project.id }}/stats" hx-trigger="refresh-files from:body" hx-swap="innerHTML">
-  {% include "_stats.html" %}
-</div>
-
 <div class="work">
   <div>
     <div x-data="uploader('{{ project.id }}')">
@@ -43,7 +39,7 @@
       </div>
     </div>
 
-    <div id="files" style="margin-top:18px" hx-get="/projects/{{ project.id }}/files" hx-trigger="refresh-files from:body" hx-swap="innerHTML">
+    <div id="files" data-project="{{ project.id }}" style="margin-top:18px" hx-get="/projects/{{ project.id }}/files" hx-trigger="refresh-files from:body" hx-swap="innerHTML">
       {% include "_files.html" %}
     </div>
   </div>

@@ -229,13 +229,9 @@ def create_app(runner=None, data_path: Path | None = None) -> FastAPI:
     def project_ctx(p: dict) -> dict:
         settings = clean_settings(p["settings"])
         media = db().list_media(p["id"])
-        stats = {"recordings": len(media),
-                 "transcribed": sum(m["status"] == "done" for m in media),
-                 "attention": sum(m["status"] == "failed" for m in media),
-                 "pending": sum(m["status"] in ("uploaded", "failed", "cancelled") for m in media),
-                 "total_duration": sum(m["duration"] or 0 for m in media)}
+        pending = sum(m["status"] in ("uploaded", "failed", "cancelled") for m in media)
         done_ids = [m["id"] for m in media if m["status"] == "done"]
-        return {"project": p, "media": media, "settings": settings, "stats": stats, "video_exts": VIDEO_EXTS,
+        return {"project": p, "media": media, "settings": settings, "pending": pending, "video_exts": VIDEO_EXTS,
                 "done_ids": done_ids,
                 "model_sizes": MODEL_SIZES, "languages": LANGUAGES, "exporters": get_exporters().values(),
                 "has_token": config.has_hf_token(), "extensions": sorted(MEDIA_EXTS)}
@@ -289,10 +285,6 @@ def create_app(runner=None, data_path: Path | None = None) -> FastAPI:
         reviewed = 1 if (await request.json()).get("reviewed") else 0
         db().update_media(mid, reviewed=reviewed)
         return {"reviewed": bool(reviewed)}
-
-    @app.get("/projects/{pid}/stats", response_class=HTMLResponse)
-    def stats_fragment(request: Request, pid: str):
-        return page(request, "_stats.html", **project_ctx(get_project_or_404(pid)))
 
     @app.post("/projects/{pid}/delete")
     def delete_project(pid: str):

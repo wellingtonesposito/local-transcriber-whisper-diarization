@@ -255,8 +255,9 @@ def test_sidebar_stats_and_project_totals(client, video):
     assert f'href="/projects/{other}"' in page                    # sidebar lists every project
     assert f'nav-item sub on" href="/projects/{pid}"' in page      # and marks Recordings as the open section
     assert f'href="/projects/{pid}/transcripts"' in page           # with a Transcripts section beside it
-    stats = client.get(f"/projects/{pid}/stats").text
-    assert "Recordings" in stats and "Total audio" in stats and ">1<" in stats
+    assert "Total audio" not in page and "Need attention" not in page   # no stats row above the recordings
+    assert f'id="files" data-project="{pid}"' in page                   # live progress still finds the project page
+    assert client.get(f"/projects/{pid}/stats").status_code == 404
     files = client.get(f"/projects/{pid}/files").text
     assert "Open transcript" in files and "Export" not in files    # transcript work lives on its own screen
     assert "Export transcripts" not in page
@@ -279,7 +280,8 @@ def test_transcripts_screen_lists_review_state_and_exports(client, video):
     assert client.put(f"/api/media/{mid}/reviewed", json={"reviewed": True}).json() == {"reviewed": True}
     listing = client.get(f"/projects/{pid}/transcripts/list").text
     assert "Reviewed" in listing and "Mark to review" in listing
-    assert 'class="num">1</b><span>Reviewed' in listing
+    assert 'Reviewed <span class="num">1</span>' in listing and 'To review <span class="num">0</span>' in listing  # counts live on the filter
+    assert 'class="stat"' not in listing and "card stat" not in listing                                 # no separate stat cards
     assert client.put("/api/media/nope/reviewed", json={"reviewed": True}).status_code == 404
 
     # re-transcribing replaces the transcript, so edits and the reviewed flag reset

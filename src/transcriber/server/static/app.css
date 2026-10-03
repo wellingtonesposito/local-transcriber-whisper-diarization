@@ -143,8 +143,6 @@ details > summary { cursor: pointer; color: var(--blue-text); font-size: 13.5px;
 .proj h3 { font-size: 17px; letter-spacing: -.01em; } .proj p { margin: 2px 0 0; color: var(--muted); font-size: 14px; min-height: 1.4em; }
 .proj .meta { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-top: 8px; }
 .proj.new { border-style: dashed; box-shadow: none; align-items: center; justify-content: center; color: var(--muted); min-height: 190px; background: transparent; text-align: center; cursor: pointer; font: inherit; }
-.stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
-.stat { padding: 14px 18px; min-width: 140px; flex: 1 1 140px; max-width: 220px; } .stat b { display: block; font-size: 24px; letter-spacing: -.02em; line-height: 1.2; } .stat span { color: var(--muted); font-size: 13px; }
 
 /* ============ Project workspace ============ */
 .work { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 22px; align-items: start; }
