@@ -84,6 +84,17 @@
       },
     });
 
+    Alpine.store("sidebar", {
+      hidden: false,
+      init() { this.hidden = store("transcriber.sidebar") === "hidden"; },
+      toggle() {
+        this.hidden = !this.hidden;
+        const root = document.documentElement;
+        if (this.hidden) { root.dataset.sidebar = "hidden"; store("transcriber.sidebar", "hidden"); }
+        else { delete root.dataset.sidebar; try { localStorage.removeItem("transcriber.sidebar"); } catch (e) { /* ignore */ } }
+      },
+    });
+
     Alpine.store("exp", {
       cleanup: "verbatim", timestamps: true, precision: 1, voice: false, merge: true, formats: ["docx_table", "vtt"],
       init() {

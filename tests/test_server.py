@@ -407,3 +407,13 @@ def test_finished_job_stores_a_transcript_summary(client, video):
     summary = json.loads(row["summary"])  # filled in when the job finished, not lazily later
     assert summary["speakers"] == ["SPEAKER_00", "SPEAKER_01"] and summary["words"] == 4 and summary["language"] == "en"
     assert row["reviewed"] == 0
+
+
+def test_sidebar_controls_and_no_footer_notice(client):
+    html = client.get("/").text
+    assert "Running locally" not in html and "Nothing leaves this computer" not in html
+    top = html[html.index('class="side-top"'):html.index("</nav>")]
+    assert top.index("Transcriber") < top.index("Theme:") < top.index("Hide sidebar")   # title, then the theme icon, then hide
+    assert "Theme: Auto" not in html                                                   # the old text button is gone
+    assert 'aria-label="Show sidebar"' in html                                          # reopen button (shown only when hidden)
+    assert 'transcriber.sidebar' in html                                                # saved state is applied before first paint
