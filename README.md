@@ -33,6 +33,14 @@ transcriber doctor                 # checks the installation
 transcriber serve                  # opens http://127.0.0.1:8765
 ```
 
+### One-click launch (macOS)
+
+Double-click **`Transcriber.command`** in Finder. It starts the app and opens it in your browser; if the app is already
+running it just opens it again. Keep the Terminal window open while you work, and close it (or press Ctrl+C) to stop the
+app. To keep it handy, drag the file to the Dock or make an alias on your Desktop. The first time, macOS may ask you to
+confirm opening it (right-click → Open). It reads the same optional `TRANSCRIBER_PORT` and `TRANSCRIBER_DATA` settings
+as the command line.
+
 ### One-time setup for speaker identification
 
 Telling speakers apart uses pyannote's models. They are free but gated by Hugging Face:
